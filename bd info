@@ -48,3 +48,94 @@ loan_id (FK к Loans.id) — Связь One-to-One (обычно один штр
 amount
 is_paid
 created_at
+
+
+
+-- 1. Роли
+CREATE TABLE roles (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(50) NOT NULL UNIQUE
+);
+
+-- 2. Авторы
+CREATE TABLE authors (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(255) NOT NULL
+);
+
+-- 3. Пользователи
+CREATE TABLE users (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    role_id INT NOT NULL,
+    full_name VARCHAR(255) NOT NULL,
+    email VARCHAR(100) UNIQUE,
+    phone VARCHAR(20),
+    login VARCHAR(50) NOT NULL UNIQUE,
+    password_hash VARCHAR(255) NOT NULL,
+    registration_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    -- Явная связь с ролями
+    CONSTRAINT fk_user_role FOREIGN KEY (role_id) REFERENCES roles(id)
+);
+
+-- 4. Книги (Общее описание)
+CREATE TABLE books (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    author_id INT NOT NULL,
+    title VARCHAR(255) NOT NULL,
+    isbn VARCHAR(20) UNIQUE,
+    description TEXT,
+    year_published INT,
+    -- Явная связь с авторами
+    CONSTRAINT fk_book_author FOREIGN KEY (author_id) REFERENCES authors(id)
+);
+
+-- 5. Экземпляры (Физические копии)
+CREATE TABLE book_copies (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    book_id INT NOT NULL,
+    inventory_number VARCHAR(50) NOT NULL UNIQUE,
+    status VARCHAR(50) DEFAULT 'available',
+    shelf_location VARCHAR(100),
+    -- Явная связь с книгами
+    CONSTRAINT fk_copy_book FOREIGN KEY (book_id) REFERENCES books(id)
+);
+
+-- 6. Бронирование
+CREATE TABLE reservations (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    book_id INT NOT NULL,
+    reader_id INT NOT NULL,
+    reservation_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    expiry_date TIMESTAMP NOT NULL,
+    is_active BOOLEAN DEFAULT TRUE,
+    -- Связи
+    CONSTRAINT fk_res_book FOREIGN KEY (book_id) REFERENCES books(id),
+    CONSTRAINT fk_res_reader FOREIGN KEY (reader_id) REFERENCES users(id)
+);
+
+-- 7. Выдачи (Loans)
+CREATE TABLE loans (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    copy_id INT NOT NULL,
+    reader_id INT NOT NULL,
+    librarian_id INT NOT NULL,
+    issue_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    due_date TIMESTAMP NOT NULL,
+    return_date TIMESTAMP,
+    status VARCHAR(50) DEFAULT 'active',
+    -- Связи
+    CONSTRAINT fk_loan_copy FOREIGN KEY (copy_id) REFERENCES book_copies(id),
+    CONSTRAINT fk_loan_reader FOREIGN KEY (reader_id) REFERENCES users(id),
+    CONSTRAINT fk_loan_librarian FOREIGN KEY (librarian_id) REFERENCES users(id)
+);
+
+-- 8. Штрафы
+CREATE TABLE fines (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    loan_id INT NOT NULL UNIQUE, -- UNIQUE делает связь 1 к 1
+    amount DECIMAL(10, 2) NOT NULL,
+    is_paid BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    -- Связь с выдачей
+    CONSTRAINT fk_fine_loan FOREIGN KEY (loan_id) REFERENCES loans(id)
+);
